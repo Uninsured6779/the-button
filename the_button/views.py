@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 
-def he(request):
+def home(request):
     return render(request, "index.html")
 
 
