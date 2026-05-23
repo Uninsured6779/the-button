@@ -3,11 +3,24 @@ name: Pipeline CI
 on:
   push:
     branches: [ master ]
+
   pull_request:
     branches: [ master ]
+
   workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
 permissions:
-  contents: read
+  contents: write
   security-events: write
 
 jobs:
@@ -196,6 +209,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     environment: production
+
     steps:
       - uses: actions/checkout@v3
 
@@ -204,22 +218,22 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          
+
       - name: Adding Known Hosts
         run: |
-          ssh-keyscan  ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-          
+          ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
       - name: Prepare deployment
         run: |
-          chmod +x  ./.github/scripts/deploy.sh
-          
-          - name: Deploy to EC2
+          chmod +x ./.github/scripts/deploy.sh
+
+      - name: Deploy to EC2
         env:
           IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/the-button
           TAG: ${{ needs.release.outputs.tag }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           ENV_NAME: production
-          run: |
-           echo "Starting deployment of version $TAG to EC2..."
-             ./.github/scripts/deploy.sh $IMAGE_NAME $TAG $EC2_HOST $EC2_USER $ENV_NAME
+        run: |
+          echo "Starting deployment of version $TAG to EC2..."
+          ./.github/scripts/deploy.sh $IMAGE_NAME $TAG $EC2_HOST $EC2_USER $ENV_NAME
